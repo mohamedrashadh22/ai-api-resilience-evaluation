@@ -13,12 +13,12 @@ The objective is to identify the strengths, limitations, and trade-offs of diffe
 
 ## Project Information
 
-| Attribute | Details |
-|---|---|
-| Project Type | Individual Final Year Project |
-| Research Area | AI Engineering, Backend Engineering, Resilience Engineering |
-| Degree Programme | BEng (Hons) Software Engineering (Top-Up) |
-| Institution | London Metropolitan University |
-| Primary Language | Python |
-| Backend Framework | FastAPI |
-| Research Approach | Controlled Experimental Evaluation |
+| Attribute         | Details                                                     |
+| ----------------- | ----------------------------------------------------------- |
+| Project Type      | Individual Final Year Project                               |
+| Research Area     | AI Engineering, Backend Engineering, Resilience Engineering |
+| Degree Programme  | BEng (Hons) Software Engineering (Top-Up)                   |
+| Institution       | London Metropolitan University                              |
+| Primary Language  | JavaScript                                                  |
+| Backend Framework | Node.js + Express                                           |
+| Research Approach | Controlled Experimental Evaluation                          |
