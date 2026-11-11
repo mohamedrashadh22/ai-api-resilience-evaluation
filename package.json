@@ -9,6 +9,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "start:mock": "node mock-model-service/server.js",
+    "dev:mock": "nodemon mock-model-service/server.js",
     "test": "node --test"
   },
   "repository": {
