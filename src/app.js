@@ -5,6 +5,7 @@ const app = express();
 app.use(express.json({ limit: '10kb' }));
 
 const MODEL_SERVICE_URL = process.env.MODEL_SERVICE_URL || "http://localhost:4001";
+const MODEL_SERVICE_TIMEOUT_MS = Number(process.env.MODEL_SERVICE_TIMEOUT_MS) || 2000;
 
 
 
@@ -50,6 +51,7 @@ app.post("/api/generate", async (req, res) => {
                     mode,
                     delayMs
                 }),
+                signal: AbortSignal.timeout(MODEL_SERVICE_TIMEOUT_MS)
             }
         );
 
@@ -70,6 +72,18 @@ app.post("/api/generate", async (req, res) => {
         });
         
     } catch (error) {
+
+        // Handle model service timeout
+        if (error.name === "TimeoutError" || error.name === "AbortError") {
+            console.log("Model service request timed out.");
+
+            return res.status(504).json({
+                success: false,
+                error: "The AI model service request timed out.",
+                timeoutMs: MODEL_SERVICE_TIMEOUT_MS
+            });
+        }
+
         console.log("Model service communication error:", error.message);
 
         return res.status(502).json({
