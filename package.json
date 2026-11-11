@@ -1,0 +1,36 @@
+{
+  "name": "ai-api-resilience-evaluation",
+  "version": "1.0.0",
+  "description": "AI-powered applications increasingly depend on external model services to deliver intelligent functionality. However, these dependencies introduce reliability challenges, including service timeouts, temporary unavailability, and unpredictable response delays.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mohamedrashadh22/ai-api-resilience-evaluation.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/mohamedrashadh22/ai-api-resilience-evaluation/issues"
+  },
+  "homepage": "https://github.com/mohamedrashadh22/ai-api-resilience-evaluation#readme",
+  "dependencies": {
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11",
+    "supertest": "^7.3.2"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true
+  }
+}
