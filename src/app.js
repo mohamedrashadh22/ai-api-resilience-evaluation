@@ -3,6 +3,30 @@ const app = express();
 
 app.use(express.json({ limit: '10kb' }));
 
+function readBooleanEnv(name, defaultValue = true) {
+
+    const value = process.env[name];
+
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    if (value.toLowerCase() === "true") {
+        return true
+    }
+
+    if (value.toLowerCase() === "false") {
+        return false;
+    }
+
+    throw new Error(`${name} must be either "true" or "false"`);
+
+}
+
+const ENABLE_TIMEOUT = readBooleanEnv("ENABLE_TIMEOUT");
+const ENABLE_RETRIES = readBooleanEnv("ENABLE_RETRIES");
+const ENABLE_CIRCUIT_BREAKER = readBooleanEnv("ENABLE_CIRCUIT_BREAKER");
+
 const MODEL_SERVICE_URL = process.env.MODEL_SERVICE_URL || "http://localhost:4001";
 const MODEL_SERVICE_TIMEOUT_MS = Number(process.env.MODEL_SERVICE_TIMEOUT_MS) || 2000;
 const MAX_MODEL_RETRIES = Number(process.env.MAX_MODEL_RETRIES) || 2;
@@ -18,6 +42,10 @@ let halfOpenProbeInProgress = false;
 
 function refreshCircuitState() {
 
+    if (!ENABLE_CIRCUIT_BREAKER) {
+        return;
+    }
+
     if (circuitState === "OPEN" && circuitOpenedAt !== null) {
         const elapsed = Date.now() - circuitOpenedAt;
 
@@ -31,6 +59,10 @@ function refreshCircuitState() {
 }
 
 function canSendRequest() {
+
+    if (!ENABLE_CIRCUIT_BREAKER) {
+        return true;
+    }
 
     refreshCircuitState();
 
@@ -52,6 +84,11 @@ function canSendRequest() {
 }
 
 function recordCircuitSuccess() {
+
+    if (!ENABLE_CIRCUIT_BREAKER) {
+        return;
+    }
+
     circuitState = "CLOSED";
     circuitFailureCount = 0;
     circuitOpenedAt = null;
@@ -61,6 +98,11 @@ function recordCircuitSuccess() {
 }
 
 function recordCircuitFailure() {
+
+    if (!ENABLE_CIRCUIT_BREAKER) {
+        return;
+    }
+
     halfOpenProbeInProgress = false;
 
     // Keep the failure count within the configured threshold
@@ -124,8 +166,10 @@ app.post("/api/generate", async (req, res) => {
 
         let modelResponse;
 
+        const maxRetires = ENABLE_RETRIES ? MAX_MODEL_RETRIES : 0;
+
         // Initial attempt + the permitted retries
-        for (let attempt = 0; attempt <= MAX_MODEL_RETRIES; attempt++) {
+        for (let attempt = 0; attempt <= maxRetires; attempt++) {
 
             attempts++;
 
@@ -143,7 +187,7 @@ app.post("/api/generate", async (req, res) => {
                             mode,
                             delayMs
                         }),
-                        signal: AbortSignal.timeout(MODEL_SERVICE_TIMEOUT_MS)
+                        ...(ENABLE_TIMEOUT ? { signal: AbortSignal.timeout(MODEL_SERVICE_TIMEOUT_MS) } : {})
                     }
                 );
                 
@@ -155,7 +199,7 @@ app.post("/api/generate", async (req, res) => {
                 }
 
                 // Retry connection failures within the configure limit
-                if (attempt < MAX_MODEL_RETRIES) {
+                if (ENABLE_RETRIES && attempt < maxRetires) {
                     console.log(`Model connection failed. Retrying (${attempts}/${MAX_MODEL_RETRIES + 1})`);
 
                     await sleep(RETRY_DELAY_MS);
@@ -169,7 +213,7 @@ app.post("/api/generate", async (req, res) => {
             // Retry only transient upstream HTTP errors
             const retryableStatuses = [502, 503, 504];
 
-            if (retryableStatuses.includes(modelResponse.status) && attempt < MAX_MODEL_RETRIES) {
+            if (ENABLE_RETRIES && retryableStatuses.includes(modelResponse.status) && attempt < maxRetires) {
                 console.log(`Model service returned ${modelResponse.status}. Retrying (${attempts}/${MAX_MODEL_RETRIES + 1})`);
 
                 // Release the previous response before retrying
@@ -242,9 +286,21 @@ app.post("/api/generate", async (req, res) => {
 
 app.get("/api/circuit-breaker", (req, res) => {
 
+    if (!ENABLE_CIRCUIT_BREAKER) {
+        return res.status(200).json({
+            enabled: false,
+            state: "DISABLED",
+            failureCount: 0,
+            failureThreshold: CIRCUIT_FAILURE_THRESHOLD,
+            resetTimeoutMs: CIRCUIT_RESET_TIMEOUT_MS,
+            probeInProgress: false
+        });
+    }
+
     refreshCircuitState();
 
     return res.status(200).json({
+        enabled: true,
         state: circuitState,
         failureCount: circuitFailureCount,
         failureThreshold: CIRCUIT_FAILURE_THRESHOLD,
